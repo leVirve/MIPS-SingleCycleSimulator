@@ -134,9 +134,14 @@ UINT32 CPU::getPC()
 UINT32 SignExtImm(UINT32 t)
 {
 	if ((t >> 15) == 0x0)
-		return t; // (0 << 16) | t
+		return t & 0xffff;
 	else
-		return (-1) & t;
+		return t | 0xffff0000;
+}
+
+UINT32 ZeroExtImm(UINT32 t)
+{
+	return t & 0xffff;
 }
 
 void CPU::R_decoder(Operand& op, UINT32& instruction)
@@ -274,7 +279,7 @@ void CPU::OpSub(Operand op)
 	// R[rd] = R[rs] - R[rt]
 	UINT32 s = this->getReg(op.instruction.R.rs);
 	UINT32 t = this->getReg(op.instruction.R.rt);
-	UINT32 val = s - t;
+	UINT32 val = s + (~t+1);
 	if (isOverflow(s, t)) throw "Number overflow";
 	this->setReg(op.instruction.R.rd, val);
 }
