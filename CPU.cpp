@@ -202,7 +202,14 @@ void CPU::I_exec(Operand instr)
 
 void CPU::J_exec(Operand instr)
 {
-
+	switch (instr.instruction.I.opcode) {
+		case 0x02
+			Opj(instr);
+			break;
+		case 0x03
+			Op(instr);
+			break;
+	}
 }
 
 
