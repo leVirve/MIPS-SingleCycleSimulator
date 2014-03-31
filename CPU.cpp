@@ -240,11 +240,6 @@ void CPU::J_exec(Operand instr)
 			break;
 		case 0x03:
 			OpJal(instr);
-		case 0x02
-			Opj(instr);
-			break;
-		case 0x03
-			Opjal(instr);
 			break;
 	}
 }
