@@ -49,6 +49,7 @@ public:
 	void OpAddi(Operand);
 	void OpLw(Operand);
 	void OpLh(Operand);
+	void OpLhu(Operand);
 	void OpLb(Operand);
 	void OpLbu(Operand);
 	void OpSw(Operand);

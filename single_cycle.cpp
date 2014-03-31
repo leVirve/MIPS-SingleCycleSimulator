@@ -1,5 +1,8 @@
 /*
- * Simulator
+ *
+ * MIPS Single Cycle Simulator
+ *
+ * Contains:
  * - loader
  * - Reporter
  * - CPU
@@ -45,15 +48,18 @@ int main()
 	memory = new Memory();
 	
 	loader();
+#ifdef _DEBUG
 	printf("PC: %X\nSP: %X\n", ENTRY_POINT, STACK_POINT); //
-	
+#endif	
 	unsigned int cycle = 0;
 	bool _halt = false;
 	while(1) {
+#ifdef _DEBUG	
 		printf("-- Round %d \n", cycle);//
+#endif
 		reporter.write(vcpu, cycle++);
 		UINT32 pc = vcpu->PC();
-		UINT32 instr = vcpu->fetch(memory->loadWord(pc));
+		UINT32 instr = vcpu->fetch(memory->loadInstruction(pc));
 		Operand operand;
 		try {
 			operand = vcpu->decode(instr);
@@ -63,6 +69,8 @@ int main()
 		_halt = vcpu->exec(operand);
 		if (_halt == true) break;
 	}
+#ifdef _DEBUG
 	puts("\n---- Simulatation Stops ! -----\n");//
+#endif
 	return 0;
 }

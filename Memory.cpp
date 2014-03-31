@@ -48,13 +48,35 @@ void Memory::setSP(UINT32 sp)
 	this->sp = sp;
 }
 
-UINT32 Memory::loadWord(UINT32 address)
+UINT32 Memory::loadInstruction(UINT32 address)
 {
 	if (address + 3 >= MEMORY_SIZE) throw "Address overflow";
-	return iMemory[address]  << 24 |
+	return iMemory[address] << 24 |
 		iMemory[address + 1] << 16 |
-		iMemory[address + 2] << 8  |
+		iMemory[address + 2] << 8 |
 		iMemory[address + 3];
+}
+
+UINT32 Memory::getWord(UINT32 address)
+{
+	if (address + 3 >= MEMORY_SIZE) throw "Address overflow";
+	return dMemory[address] << 24 |
+		dMemory[address + 1] << 16 |
+		dMemory[address + 2] << 8 |
+		dMemory[address + 3];
+}
+
+UINT32 Memory::getHalfWord(UINT32 address)
+{
+	if (address + 1 >= MEMORY_SIZE) throw "Address overflow";
+	return dMemory[address] << 8 |
+		dMemory[address + 1];
+}
+
+UINT32 Memory::getByte(UINT32 address)
+{
+	if (address >= MEMORY_SIZE) throw "Address overflow";
+	return dMemory[address];
 }
 
 void Memory::saveWord(UINT32 address, UINT32 word)
