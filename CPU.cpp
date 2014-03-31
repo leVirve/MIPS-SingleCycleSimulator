@@ -207,7 +207,7 @@ void CPU::J_exec(Operand instr)
 			Opj(instr);
 			break;
 		case 0x03
-			Op(instr);
+			Opjal(instr);
 			break;
 	}
 }
