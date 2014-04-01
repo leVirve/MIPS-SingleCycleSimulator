@@ -38,7 +38,7 @@ void loader()
 
 	memory->load(ir, data, ENTRY_POINT);
 	vcpu->setPC(ENTRY_POINT);
-	memory->setSP(STACK_POINT);
+	vcpu->setSP(STACK_POINT);
 	vcpu->setMemory(memory);
 }
 
@@ -66,6 +66,7 @@ int main()
 		} catch (char* e) {
 			// errDump.write();
 		}
+		memory->printMemory();//
 		_halt = vcpu->exec(operand);
 		if (_halt == true) break;
 	}

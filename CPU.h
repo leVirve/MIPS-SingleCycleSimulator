@@ -17,6 +17,8 @@ public:
 	void setMemory(Memory*);
 
 	void setPC(UINT32);
+	void setSP(UINT32);
+
 	UINT32 getPC();
 	UINT32 getReg(int);
 	int setReg(int, UINT32);
@@ -33,6 +35,11 @@ public:
 	void R_exec(Operand instr);
 	void I_exec(Operand instr);
 	void J_exec(Operand instr);
+
+	UINT32 SignExtImm(UINT32);
+	UINT32 ZeroExtImm(UINT32);
+	UINT32 JumpAddr(UINT32);
+	UINT32 BranchAdrr(UINT32);
 
 	void OpAdd(Operand);
 	void OpSub(Operand);

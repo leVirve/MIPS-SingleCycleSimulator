@@ -10,6 +10,11 @@ void CPU::setPC(UINT32 pc)
 	this->pc = pc;
 }
 
+void CPU::setSP(UINT32 sp)
+{
+	this->setReg(29, sp);
+}
+
 UINT32 CPU::getPC()
 {
 	return pc;
@@ -127,11 +132,6 @@ int CPU::setReg(int targ, UINT32 content)
 	return 0;
 }
 
-UINT32 CPU::getPC()
-{
-	return pc;
-}
-
 void CPU::R_decoder(Operand& op, UINT32& instruction)
 {
 	op.instruction.R.rs = (instruction >> 21) & 0x1f;
@@ -222,7 +222,7 @@ void CPU::I_exec(Operand instr)
 		case 0x29:
 			OpSh(instr);
 			break;
-		case 0x29:
+		case 0x28:
 			OpSb(instr);
 			break;
 		case 0x0F:
@@ -265,7 +265,7 @@ void CPU::J_exec(Operand instr)
  * @param  (16-bit immediate field) t
  * @return (32-bit) signed_ext
  */
-UINT32 SignExtImm(UINT32 t)
+UINT32 CPU::SignExtImm(UINT32 t)
 {
 	// 16{immediate[15]}, immediate
 	if ((t >> 15) == 0x0)
@@ -278,7 +278,7 @@ UINT32 SignExtImm(UINT32 t)
  * @param  (16-bit immediate field) t
  * @return (32-bit) zero_ext
  */
-UINT32 ZeroExtImm(UINT32 t)
+UINT32 CPU::ZeroExtImm(UINT32 t)
 {
 	// 16{1b'0}, immediate
 	return t & 0x0000ffff;
@@ -288,7 +288,7 @@ UINT32 ZeroExtImm(UINT32 t)
  * @param (16-bit immediate field) t
  * @return (32-bit) address
  */
-UINT32 BranchAdrr(UINT32 t)
+UINT32 CPU::BranchAdrr(UINT32 t)
 {
 	// BranchAddr = {14{immediate[15]}, immediate, 2'b0}
 	if((t >> 15) == 0x0)
@@ -301,7 +301,7 @@ UINT32 BranchAdrr(UINT32 t)
  * @param (26-bit immediate field) t
  * @return (32-bit) address
  */
-UINT32 JumpAdrr(UINT32 t)
+UINT32 CPU::JumpAddr(UINT32 t)
 {
 	// JumpAddr = {PC + 4[31:28], address, 2'b0}
 	UINT32 addr = (this->getPC() + 4) & 0xf0000000;
@@ -474,7 +474,7 @@ void CPU::OpSw(Operand op)
 	// 4 bytes in Memory[R[rs] + C(signed)] = R[rt] 
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
-	this->setReg(this->memory->saveWord(s + imm), op.instruction.I.rt);
+	this->memory->saveWord(s + imm, this->getReg(op.instruction.I.rt));
 }
 
 void CPU::OpSh(Operand op)
@@ -482,7 +482,7 @@ void CPU::OpSh(Operand op)
 	// 2 bytes in Memory[R[rs] + C(signed)], signed = R[rt]
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
-	this->setReg(this->memory->saveHalfWord(s + imm), op.instruction.I.rt & 0x0000ffff);
+	this->memory->saveHalfWord(s + imm, this->getReg(op.instruction.I.rt) & 0x0000ffff);
 }
 
 void CPU::OpSb(Operand op)
@@ -490,7 +490,7 @@ void CPU::OpSb(Operand op)
 	// 2 bytes in Memory[R[rs] + C(signed)], signed = R[rt]
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
-	this->setReg(this->memory->saveByte(s + imm), op.instruction.I.rt & 0x000000ff);
+	this->memory->saveByte(s + imm, this->getReg(op.instruction.I.rt) & 0x000000ff);
 }
 
 void CPU::OpLui(Operand op)
@@ -558,8 +558,9 @@ void CPU::OpJ(Operand op)
 
 void CPU::OpJal(Operand op)
 {
-	// R[31] = PC + 8
+	// R[31] = PC
 	// PC = JumpAddr
-	this->setReg(31, this->getPC() + 8);
+	/* already +4 after PC() */
+	this->setReg(31, this->getPC());
 	this->setPC(JumpAddr(op.instruction.J.address));
 }
