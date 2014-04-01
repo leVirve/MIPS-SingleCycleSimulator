@@ -15,16 +15,17 @@ private:
 public:
 	CPU();
 	void setMemory(Memory*);
+
 	void setPC(UINT32);
+	UINT32 getPC();
+	UINT32 getReg(int);
+	int setReg(int, UINT32);
 	UINT32 PC();
+	
 	UINT32 fetch(UINT32);
 	Operand decode(UINT32);
 	bool exec(Operand);
 	
-	UINT32 getReg(int);
-	int setReg(int, UINT32);
-	UINT32 getPC();
-
 	void R_decoder(Operand& op, UINT32& instruction);
 	void I_decoder(Operand& op, UINT32& instruction);
 	void J_decoder(Operand& op, UINT32& instruction);
