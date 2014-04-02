@@ -56,31 +56,29 @@ UINT32 Memory::loadInstruction(UINT32 address)
 
 UINT32 Memory::getWord(UINT32 address)
 {
-	if (address + 3 >= MEMORY_SIZE) throw "Address overflow";
-	UINT32 gg = dMemory[address] |
+	if (address + 3 >= MEMORY_SIZE) throw ERR_MEMMORY_ADDRESS_OVERFLOW;
+	return dMemory[address] |
 		dMemory[address + 1] << 8 |
 		dMemory[address + 2] << 16 |
 		dMemory[address + 3] << 24;
-	printf("ADDRESS: %X %X\n", address, gg);
-	return gg;
 }
 
 UINT32 Memory::getHalfWord(UINT32 address)
 {
-	if (address + 1 >= MEMORY_SIZE) throw "Address overflow";
+	if (address + 1 >= MEMORY_SIZE) throw ERR_MEMMORY_ADDRESS_OVERFLOW;
 	return dMemory[address] |
 		dMemory[address + 1] << 8;
 }
 
 UINT32 Memory::getByte(UINT32 address)
 {
-	if (address >= MEMORY_SIZE) throw "Address overflow";
+	if (address >= MEMORY_SIZE) throw ERR_MEMMORY_ADDRESS_OVERFLOW;
 	return dMemory[address];
 }
 
 void Memory::saveWord(UINT32 address, UINT32 word)
 {
-	if (address + 3 >= MEMORY_SIZE) throw "Address overflow";
+	if (address + 3 >= MEMORY_SIZE) throw ERR_MEMMORY_ADDRESS_OVERFLOW;
 	printf("ADDRESS : %X %X", address, word);
 	dMemory[address] = (word >> 0) & 0xff;
 	dMemory[address + 1] = (word >> 8) & 0xff;
@@ -90,14 +88,14 @@ void Memory::saveWord(UINT32 address, UINT32 word)
 
 void Memory::saveHalfWord(UINT32 address, UINT32 halfword)
 {
-	if (address + 1 >= MEMORY_SIZE) throw "Address overflow";
+	if (address + 1 >= MEMORY_SIZE) throw ERR_MEMMORY_ADDRESS_OVERFLOW;
 	dMemory[address] = (halfword >> 0) & 0xff;
 	dMemory[address + 1] = (halfword >> 8) & 0xff;
 }
 
 void Memory::saveByte(UINT32 address, UINT32 byte)
 {
-	if (address >= MEMORY_SIZE) throw "Address overflow";
+	if (address >= MEMORY_SIZE) throw ERR_MEMMORY_ADDRESS_OVERFLOW;
 	dMemory[address] = byte;
 }
 

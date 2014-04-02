@@ -10,14 +10,16 @@
  */
 
 #include "env.h"
-#include "Reporter.h"
 #include "CPU.h"
 #include "Memory.h"
+#include "Reporter.h"
+#include "errDump.h"
 
 CPU* vcpu;
 Memory* memory;
 
 Reporter reporter;
+ErrDumper errdumper;
 
 UINT32 ENTRY_POINT;
 UINT32 STACK_POINT;
@@ -48,13 +50,11 @@ int main()
 	memory = new Memory();
 	
 	loader();
-#ifdef _DEBUG
-	printf("PC: %X\nSP: %X\n", ENTRY_POINT, STACK_POINT); //
-#endif	
 	unsigned int cycle = 0;
 	bool _halt = false;
 	while(1) {
-#ifdef _DEBUG	
+#ifdef _DEBUG
+		printf("PC: %X\nSP: %X\n", ENTRY_POINT, STACK_POINT); //
 		printf("-- Round %d \n", cycle);//
 #endif
 		reporter.write(vcpu, cycle++);
@@ -64,9 +64,11 @@ int main()
 		try {
 			operand = vcpu->decode(instr);
 		} catch (char* e) {
-			// errDump.write();
+			errdumper.write(e);
 		}
-		memory->printMemory();//
+#ifdef _DEBUG
+		memory->printMemory();
+#endif
 		_halt = vcpu->exec(operand);
 		if (_halt == true) break;
 	}

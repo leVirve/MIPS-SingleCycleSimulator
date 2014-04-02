@@ -19,6 +19,11 @@
 #define BYTE unsigned char
 #define MEMORY_SIZE 1024
 
+#define ERR_WRITE_REG_ZERO 1
+#define ERR_NUMBER_OVERFLOW 2
+#define ERR_MEMMORY_ADDRESS_OVERFLOW 3
+#define ERR_DATA_MISALIGNED 4
+
 #ifdef _MSC_VER
 #pragma warning(disable:4996)
 #endif

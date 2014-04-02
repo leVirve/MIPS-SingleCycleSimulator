@@ -2,12 +2,17 @@
 #include "CPU.h"
 
 class Reporter {
+
+private:
+
+	FILE* reg_snapshot;
+
 public:
+
 	Reporter();
 	~Reporter();
 	void write(CPU*, unsigned int);
-private:
-	FILE* reg_snapshot;
+
 };
 
 Reporter::Reporter()
@@ -17,6 +22,7 @@ Reporter::Reporter()
 
 Reporter ::~Reporter()
 {
+	fclose(reg_snapshot);
 }
 
 void Reporter::write(CPU* vcpu, unsigned int cycle)

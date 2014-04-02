@@ -2,17 +2,20 @@
 #define __CPU_H__
 
 #include "env.h"
-#include "Memory.h"
 #include "struct.h"
+
+#include "Memory.h"
 
 class CPU {
 
 private:
+
 	UINT32 pc;
 	UINT32 reg[32];
 	Memory* memory;
 
 public:
+
 	CPU();
 	void setMemory(Memory*);
 
@@ -21,7 +24,7 @@ public:
 
 	UINT32 getPC();
 	UINT32 getReg(int);
-	int setReg(int, UINT32);
+	void setReg(int, UINT32);
 	UINT32 PC();
 	
 	UINT32 fetch(UINT32);
@@ -37,6 +40,7 @@ public:
 	void J_exec(Operand instr);
 
 	UINT32 SignExtImm(UINT32);
+	UINT32 SignExtImmb(UINT32);
 	UINT32 ZeroExtImm(UINT32);
 	UINT32 JumpAddr(UINT32);
 	UINT32 BranchAdrr(UINT32);
