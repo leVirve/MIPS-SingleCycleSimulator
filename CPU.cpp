@@ -5,7 +5,6 @@
  * - clean up the $reg[] to 0
  * - setup PC
  * - set Memory known by CPU
- * - set ErrDumper known by CPU
  * - set(store) SP into reg[$sp]
  */
 
@@ -34,6 +33,10 @@ UINT32 CPU::getPC()
 	return pc;
 }
 
+/**
+ * PC increment
+ * @return before increment PC
+ */
 UINT32 CPU::PC()
 {
 	UINT32 current_pc = pc;
@@ -108,9 +111,11 @@ bool CPU::exec(Operand instr)
 	// try-catch the following errors:
 	// . Write Reg[0] error
 	// . Number overflow
-	try {
-		char _type = instr.tpye;
-		switch (_type) {
+	// . I-Memory Address Overflow
+	// . D-Memory Address Overflow
+	// . Misalign Error
+	char _type = instr.tpye;
+	switch (_type) {
 		case R_TYPE:
 			R_exec(instr);
 			break;
@@ -123,22 +128,6 @@ bool CPU::exec(Operand instr)
 		case HALT:
 			return true;
 			break;
-		}
-	} catch (int expCode) {
-		switch (expCode) {
-			case ERR_WRITE_REG_ZERO:
-				throw "Write $0 error in cycle: ";
-				break;
-			case ERR_NUMBER_OVERFLOW:
-				throw "Number overflow in cycle: ";
-				break;
-			case ERR_MEMMORY_ADDRESS_OVERFLOW:
-				throw ERR_MEMMORY_ADDRESS_OVERFLOW;
-				break;
-			case ERR_DATA_MISALIGNED:
-				throw ERR_DATA_MISALIGNED;
-				break;
-		}
 	}
 	return false;
 }
@@ -151,8 +140,9 @@ UINT32 CPU::getReg(int idx)
 void CPU::setReg(int targ, UINT32 content)
 {
 	// ERR_Detection: check for REG$0
-	if (targ == 0) throw "Write $0 error";
-
+	if (targ == 0) return; // Do not write the data in.
+		/* no use in this project: 
+			 throw (UINT32)ERR_WRITE_REG_ZERO; */
 	reg[targ] = content;
 }
 
@@ -364,7 +354,9 @@ bool isOverflow(UINT32 a, UINT32 b)
 */
 UINT32 twoComplement(UINT32 t)
 {
-	if (t == 0x80000000) throw ERR_NUMBER_OVERFLOW;
+		/* no need in this project
+			if (t == 0x80000000) 
+				throw ERR_NUMBER_OVERFLOW; */
 	return ~ t + 1;
 }
 
@@ -372,90 +364,146 @@ UINT32 twoComplement(UINT32 t)
 void CPU::OpAdd(Operand op)
 {
 	// R[rd] = R[rs] + R[rt]
-	// ERR_Detection : throw overflow message, and execute this instruction
+	// ERR_Detection : throw write reg $0
+	// ERR_Detection : throw overflow message, and continue this instruction
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.R.rs);
 	UINT32 t = this->getReg(op.instruction.R.rt);
 	UINT32 val = s + t;
+
+	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
+	if (isOverflow(s, t)) err |= ERR_NUMBER_OVERFLOW; // continue
 	this->setReg(op.instruction.R.rd, val);
-	if (isOverflow(s, t)) throw ERR_NUMBER_OVERFLOW;
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpSub(Operand op)
 {
 	// R[rd] = R[rs] - R[rt]
-	// ERR_Detection : throw overflow message, and execute this instruction
+	// ERR_Detection : throw write reg $0
+	// ERR_Detection : throw overflow | t = -2^31 message, and continue this instruction 
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.R.rs);
 	UINT32 t = this->getReg(op.instruction.R.rt);
 	UINT32 val = s + twoComplement(t);
+
+	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
+	if (isOverflow(s, t) || t == 0x80000000) err |= ERR_NUMBER_OVERFLOW; // continue
 	this->setReg(op.instruction.R.rd, val);
-	if (isOverflow(s, t)) throw ERR_NUMBER_OVERFLOW;
+	if (err != 0) throw err; // send error message
 }
 void CPU::OpAnd(Operand op)
 {
 	// R[rd] = R[rs] & R[rt]
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.R.rs);
 	UINT32 t = this->getReg(op.instruction.R.rt);
+
+	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.R.rd, s & t);
+	if (err != 0) throw err; // send error message
 }
 void CPU::OpOr(Operand op)
 {
 	// R[rd] = R[rs] | R[rt]
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.R.rs);
 	UINT32 t = this->getReg(op.instruction.R.rt);
+
+	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.R.rd, s | t);
+	if (err != 0) throw err; // send error message
 }
 void CPU::OpXor(Operand op)
 {
 	// R[rd] = R[rs] ^ R[rt]
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.R.rs);
 	UINT32 t = this->getReg(op.instruction.R.rt);
+
+	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.R.rd, s ^ t);
+	if (err != 0) throw err; // send error message
 }
 void CPU::OpNor(Operand op)
 {
 	// R[rd] = ~(R[rs] | R[rt])
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.R.rs);
 	UINT32 t = this->getReg(op.instruction.R.rt);
+
+	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.R.rd, ~(s | t));
+	if (err != 0) throw err; // send error message
 }
 void CPU::OpNand(Operand op)
 {
 	// R[rd] = ~(R[rs] & R[rt])
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.R.rs);
 	UINT32 t = this->getReg(op.instruction.R.rt);
+
+	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.R.rd, ~(s & t));
+	if (err != 0) throw err; // send error message
 }
 void CPU::OpSlt(Operand op)
 {
 	// R[rd] = R[rs] < R[rt] ? 1 : 0
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.R.rs);
 	UINT32 t = this->getReg(op.instruction.R.rt);
+
+	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.R.rd, s < t ? 1 : 0);
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpSll(Operand op)
 {
 	// R[rd] = R[rt] << shamt
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 t = this->getReg(op.instruction.R.rt);
 	UINT32 shamt = op.instruction.R.shamt;
+
+	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.R.rd, t << shamt);
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpSrl(Operand op)
 {
 	// R[rd] = R[rt] >> shamt
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 t = this->getReg(op.instruction.R.rt);
 	UINT32 shamt = op.instruction.R.shamt;
+
+	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.R.rd, t >> shamt);
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpSra(Operand op)
 {
-	// R[rd] = R[rt] >> shamt, with signed bit shifted in
-	UINT32 t = this->getReg(op.instruction.R.rt);
+	// R[rd] = R[rt] >> shamt, with signed bit shifted in (arithmetically)
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
+	INT32  t = this->getReg(op.instruction.R.rt);
 	UINT32 shamt = op.instruction.R.shamt;
-	UINT32 val = (t & 0x8fffffff) | (t >> shamt); ///// Someone can check this ?
+	UINT32 val = (t > 0) ? t >> shamt
+						: (t >> shamt) | ~( 0xffffffff >> shamt );
+
+	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.R.rd, val);
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpJr(Operand op)
@@ -468,166 +516,256 @@ void CPU::OpJr(Operand op)
 /* I-type */
 void CPU::OpAddi(Operand op)
 {
-	// R[rt] = R[rs] + immediate(signed)
+	// R[rt] = R[rs] + immediate(signed)	
+	// ERR_Detection : throw write reg $0
 	// ERR_Detection : throw overflow message, and execute this instruction
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
 	UINT32 val = s + imm;
+
+	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
+	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW; // continue
 	this->setReg(op.instruction.I.rt, val);
-	if (isOverflow(s, imm)) ERR_NUMBER_OVERFLOW;
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpLw(Operand op)
 {
 	// R[rt] = 4 bytes from Memory[R[rs] + C(signed)]
-	// ERR_Detection : throw overflow message, and execute this instruction
+	// ERR_Detection : throw write reg $0
+	// ERR_Detection : throw overflow message, and continue this instruction
+	// ERR_Detection : throw memory address overflow, and halt simulation
+	// ERR_Detection : throw misalignment message, and halt simulation
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
+
+	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
+	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
+	if ((s + imm) % 4 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
 	this->setReg(op.instruction.I.rt, this->memory->getWord(s + imm));
-	if (isOverflow(s, imm)) ERR_NUMBER_OVERFLOW;
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpLh(Operand op)
 {
 	// R[rt] = 2 bytes from Memory[R[rs] + C(signed)], signed
 	// Use SignExt()
-	// ERR_Detection : throw overflow message, and execute this instruction
+	// ERR_Detection : throw write reg $0
+	// ERR_Detection : throw overflow message, and continue this instruction
+	// ERR_Detection : throw memory address overflow, and halt simulation
+	// ERR_Detection : throw misalignment message, and halt simulation
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
+
+	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
+	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
+	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
 	UINT32 val = SignExtImm(this->memory->getHalfWord(s + imm));
 	this->setReg(op.instruction.I.rt, val);
-	if (isOverflow(s, imm)) ERR_NUMBER_OVERFLOW;
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpLhu(Operand op)
 {
 	// R[rt] = 2 bytes from Memory[R[rs] + C(signed)], unsigned
-	// ERR_Detection : throw overflow message, and execute this instruction
+	// ERR_Detection : throw write reg $0
+	// ERR_Detection : throw overflow message, and continue this instruction
+	// ERR_Detection : throw memory address overflow, and halt simulation
+	// ERR_Detection : throw misalignment message, and halt simulation
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
+
+	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
+	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
+	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
 	UINT32 val = this->memory->getHalfWord(s + imm);
-	this->setReg(op.instruction.I.rt, val & 0x0000ffff);
-	if (isOverflow(s, imm)) ERR_NUMBER_OVERFLOW;
+	this->setReg(op.instruction.I.rt, val & 0xffff);
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpLb(Operand op)
 {
 	// R[rt] = 1 bytes from Memory[R[rs] + C(signed)], signed
+	// Use SignExtb()  SignExt for val must use 8-bit extention
+	// ERR_Detection : throw write reg $0
 	// ERR_Detection : throw overflow message, and execute this instruction
-	// Use SignExtb()
-	// SignExt for val must use 8-bit extention
+	// ERR_Detection : throw memory address overflow, and halt simulation
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
+
+	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
+	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
 	UINT32 val = SignExtImmb(this->memory->getByte(s + imm));
 	this->setReg(op.instruction.I.rt, val);
-	if (isOverflow(s, imm)) ERR_NUMBER_OVERFLOW;
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpLbu(Operand op)
 {
 	// R[rt] = 1 bytes from Memory[R[rs] + C(signed)], unsigned
+	// ERR_Detection : throw write reg $0
 	// ERR_Detection : throw overflow message, and execute this instruction
+	// ERR_Detection : throw memory address overflow, and halt simulation
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
+
+	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
+	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
 	UINT32 val = this->memory->getByte(s + imm);
-	this->setReg(op.instruction.I.rt, val & 0x000000ff);
-	if (isOverflow(s, imm)) ERR_NUMBER_OVERFLOW;
+	this->setReg(op.instruction.I.rt, val & 0xff);
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpSw(Operand op)
 {
 	// 4 bytes in Memory[R[rs] + C(signed)] = R[rt] 
-	// ERR_Detection : throw overflow message, and execute this instruction
+	// ERR_Detection : throw overflow message, and continue this instruction
+	// ERR_Detection : throw memory address overflow, and halt simulation
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
 	UINT32 val = this->getReg(op.instruction.I.rt);
+
+	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
 	this->memory->saveWord(s + imm, val);
-	if (isOverflow(s, imm)) ERR_NUMBER_OVERFLOW;
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpSh(Operand op)
 {
 	// 2 bytes in Memory[R[rs] + C(signed)], signed = R[rt]
 	// ERR_Detection : throw overflow message, and execute this instruction
+	// ERR_Detection : throw memory address overflow, and halt simulation
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
 	UINT32 val = this->getReg(op.instruction.I.rt) & 0xffff;
+
+	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
 	this->memory->saveHalfWord(s + imm, val);
-	if (isOverflow(s, imm)) ERR_NUMBER_OVERFLOW;
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpSb(Operand op)
 {
 	// 2 bytes in Memory[R[rs] + C(signed)], signed = R[rt]
 	// ERR_Detection : throw overflow message, and execute this instruction
+	// ERR_Detection : throw memory address overflow, and halt simulation
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
-	UINT32 val = this->getReg(op.instruction.I.rt) & 0x000000ff;
+	UINT32 val = this->getReg(op.instruction.I.rt) & 0xff;
+
+	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
 	this->memory->saveByte(s + imm, val);
-	if (isOverflow(s, imm)) ERR_NUMBER_OVERFLOW;
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpLui(Operand op)
 {
 	// R[rt] = immediate << 16
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 imm = op.instruction.I.immediate;
 	imm = imm << 16;
+
+	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.I.rt, imm);
+	if (err != 0) throw err; // send error message
 }
 
 void CPU::OpAndi(Operand op)
 {
 	// R[rt] = R[rs] & immediate(unsigned)
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = ZeroExtImm(op.instruction.I.immediate);
 	s &= imm;
+
+	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.I.rt, s);
+	if (err != 0) throw err; // send error message
 }
 void CPU::OpOri(Operand op)
 {
 	// R[rt] = R[rs] | immediate(unsigned)
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = ZeroExtImm(op.instruction.I.immediate);
+
+	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	s |= imm;
-	printf("------- %X\n", s);
 	this->setReg(op.instruction.I.rt, s);
+	if (err != 0) throw err; // send error message
 }
 void CPU::OpNori(Operand op)
 {
 	// R[rt] = ~( R[rs] | immediate(unsigned) )
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = ZeroExtImm(op.instruction.I.immediate);
+
+	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	s = ~(s | imm);
 	this->setReg(op.instruction.I.rt, s);
+	if (err != 0) throw err; // send error message
 }
 void CPU::OpSlti(Operand op)
 {
 	// R[rt] = (R[rs] < immediate(signed)) ? 1 : 0, signed comparison
+	// ERR_Detection : throw write reg $0
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
+
+	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.I.rt, s < imm ? 1 : 0);
+	if (err != 0) throw err; // send error message
 }
 void CPU::OpBeq(Operand op)
 {
 	// if (R[rs] == R[rt]) PC = PC + BranchAddr
 	/* already +4 after PC() */
 	// ERR_Detection : throw overflow message, and execute this instruction
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 t = this->getReg(op.instruction.I.rt);
 	UINT32 imm = BranchAdrr(op.instruction.I.immediate);
+	
+	if (isOverflow(this->pc, imm)) err |= ERR_NUMBER_OVERFLOW;
 	if (s == t) this->setPC(this->pc + imm);
-	if (isOverflow(this->pc, imm)) ERR_NUMBER_OVERFLOW;
+	if (err != 0) throw err; // send error message
 }
 void CPU::OpBne(Operand op)
 {
 	// if (R[rs] == R[rt]) PC = PC + BranchAddr
 	/* already +4 after PC() */
 	// ERR_Detection : throw overflow message, and execute this instruction
+	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 t = this->getReg(op.instruction.I.rt);
 	UINT32 imm = BranchAdrr(op.instruction.I.immediate);
+
+	if (isOverflow(this->pc, imm)) err |= ERR_NUMBER_OVERFLOW;
 	if (s != t) this->setPC(this->pc + imm);
-	if (isOverflow(this->pc, imm)) ERR_NUMBER_OVERFLOW;
+	if (err != 0) throw err; // send error message
 }
 
 /* J-type */

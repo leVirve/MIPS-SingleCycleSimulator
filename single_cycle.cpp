@@ -2,11 +2,11 @@
  *
  * MIPS Single Cycle Simulator
  *
- * Contains:
- * - loader
- * - Reporter
- * - CPU
- * - Memory
+ * Develop: TaiwanGoodGood
+ * Maintainance Member: Salas , Venxarmy
+ *
+ * Last Time Update: 2014/04
+ *
  */
 
 #include "env.h"
@@ -31,7 +31,7 @@ void loader()
 	FILE* ir = fopen(IR_BIN, "r");
 	FILE* data = fopen(DATA_BIN, "r");
 	try {
-		if (ir == NULL || data == NULL) throw "No File";
+		///if (ir == NULL || data == NULL) throw "No File";
 		fread(&pc, sizeof(UINT32), 1, ir);
 		fread(&sp, sizeof(UINT32), 1, data);
 	} catch (char* e) {
@@ -48,32 +48,56 @@ int main()
 {
 	vcpu = new CPU();
 	memory = new Memory();
-	
+
 	loader();
 	unsigned int cycle = 0;
 	bool _halt = false;
-	while(1) {
+	while (1) {
 #ifdef _DEBUG
 		printf("PC: %X\nSP: %X\n", ENTRY_POINT, STACK_POINT); //
 		printf("-- Round %d \n", cycle);//
 #endif
-		reporter.write(vcpu, cycle++);
+		reporter.write(vcpu, cycle);
 		UINT32 pc = vcpu->PC();
 		UINT32 instr = vcpu->fetch(memory->loadInstruction(pc));
-		Operand operand;
-		try {
-			operand = vcpu->decode(instr);
-		} catch (char* e) {
-			errdumper.write(e);
-		}
+		Operand operand = vcpu->decode(instr);
+
 #ifdef _DEBUG
 		memory->printMemory();
 #endif
-		_halt = vcpu->exec(operand);
+
+		try {
+			_halt = vcpu->exec(operand);
+		}
+		catch (UINT32 expCode) {
+			char errInfo[100] = {};
+			if (expCode & ERR_WRITE_REG_ZERO) {
+				sprintf(errInfo, "Write $0 error in cycle: %d", cycle);
+				errdumper.write(errInfo);
+			}
+			if (expCode & ERR_NUMBER_OVERFLOW) {
+				sprintf(errInfo, "Number overflow in cycle: %d", cycle);
+				errdumper.write(errInfo);
+			}
+			if (expCode & ERR_MEMMORY_ADDRESS_OVERFLOW) {
+				sprintf(errInfo, "Address overflow in cycle: %d", cycle);
+				errdumper.write(errInfo);
+				_halt = true;
+			}
+			if (expCode & ERR_DATA_MISALIGNED) {
+				sprintf(errInfo, "Misalignment error in cycle: %d", cycle);
+				errdumper.write(errInfo);
+				_halt = true;
+			}
+#ifdef _DEBUG
+			printf("EXP: %X !!!!!!!!!!!!!!\n", expCode);
+#endif
+		}
 		if (_halt == true) break;
+		++cycle;
 	}
 #ifdef _DEBUG
-	puts("\n---- Simulatation Stops ! -----\n");//
+		puts("\n---- Simulatation Stops ! -----\n");//
 #endif
 	return 0;
 }
