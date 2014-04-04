@@ -1,0 +1,9 @@
+This is a simulator of a real CPU running.
+The inputs should be "iimage.bin" & "dimage.bin".
+The outputs are "error_dump.rpt" & "anapshot.rpt"
+
+This programe is able read the instructures of MIPS form.
+It's design to do the works asks by them on the virtual memory and rigester.
+Then sends out a report to show the status it run, and another report to show all errors if any.
+
+--project done by archi37 group.
