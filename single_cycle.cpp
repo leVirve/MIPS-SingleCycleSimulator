@@ -56,14 +56,16 @@ int main()
 #ifdef _DEBUG
 		printf("PC: %X\nSP: %X\n", ENTRY_POINT, STACK_POINT); //
 		printf("-- Round %d \n", cycle);//
+		//if (cycle == 60) break;
 #endif
 		reporter.write(vcpu, cycle);
+		++cycle;
 		UINT32 pc = vcpu->PC();
 		UINT32 instr = vcpu->fetch(memory->loadInstruction(pc));
 		Operand operand = vcpu->decode(instr);
 
 #ifdef _DEBUG
-		memory->printMemory();
+		//memory->printMemory();
 #endif
 
 		try {
@@ -94,7 +96,6 @@ int main()
 #endif
 		}
 		if (_halt == true) break;
-		++cycle;
 	}
 #ifdef _DEBUG
 		puts("\n---- Simulatation Stops ! -----\n");//

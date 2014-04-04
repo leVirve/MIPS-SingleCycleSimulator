@@ -76,7 +76,7 @@ Operand CPU::decode(UINT32 instruction)
 	// distinguish instructions from R, I, J type
 	UINT32 _type = instruction >> (32 - 6) & 0x3f;
 #ifdef _DEBUG
-	printf("type: %02x\n", _type);
+	printf("OpCode: %02X\n", _type);
 #endif
 	switch (_type) {
 		case 0x0: // R-type
@@ -457,8 +457,9 @@ void CPU::OpSlt(Operand op)
 	// R[rd] = R[rs] < R[rt] ? 1 : 0
 	// ERR_Detection : throw write reg $0
 	UINT32 err = 0;
-	UINT32 s = this->getReg(op.instruction.R.rs);
-	UINT32 t = this->getReg(op.instruction.R.rt);
+	/* Use Signed Number Compare ! */
+	INT32 s = this->getReg(op.instruction.R.rs);
+	INT32 t = this->getReg(op.instruction.R.rt);
 
 	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.R.rd, s < t ? 1 : 0);
@@ -732,8 +733,9 @@ void CPU::OpSlti(Operand op)
 	// R[rt] = (R[rs] < immediate(signed)) ? 1 : 0, signed comparison
 	// ERR_Detection : throw write reg $0
 	UINT32 err = 0;
-	UINT32 s = this->getReg(op.instruction.I.rs);
-	UINT32 imm = SignExtImm(op.instruction.I.immediate);
+	/* Use Signed Number Compare ! */
+	INT32 s = this->getReg(op.instruction.I.rs);
+	INT32 imm = SignExtImm(op.instruction.I.immediate);
 
 	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.I.rt, s < imm ? 1 : 0);

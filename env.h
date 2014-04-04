@@ -38,6 +38,6 @@
 /* Output File */
 
 #define SNAPSHOT "snapshot.rpt"
-#define ERR_DUMP "err_dump.rpt"
+#define ERR_DUMP "error_dump.rpt"
 
 #endif
