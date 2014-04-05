@@ -330,8 +330,9 @@ UINT32 CPU::BranchAdrr(UINT32 t)
  */
 UINT32 CPU::JumpAddr(UINT32 t)
 {
-	// JumpAddr = {PC + 4[31:28], address, 2'b0}
-	UINT32 addr = (this->getPC() + 4) & 0xf0000000;
+	// JumpAddr = {PC[31:28], address, 2'b0}
+	/* already +4 after fetch */
+	UINT32 addr = this->getPC() & 0xf0000000;
 	return addr | (t << 2);
 }
 
@@ -392,6 +393,7 @@ void CPU::OpSub(Operand op)
 	this->setReg(op.instruction.R.rd, val);
 	if (err != 0) throw err; // send error message
 }
+
 void CPU::OpAnd(Operand op)
 {
 	// R[rd] = R[rs] & R[rt]
@@ -744,12 +746,13 @@ void CPU::OpSlti(Operand op)
 void CPU::OpBeq(Operand op)
 {
 	// if (R[rs] == R[rt]) PC = PC + BranchAddr
-	/* already +4 after PC() */
+	/* already +4 after fetch */
+	/* Signed Operation on imm */
 	// ERR_Detection : throw overflow message, and execute this instruction
 	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 t = this->getReg(op.instruction.I.rt);
-	UINT32 imm = BranchAdrr(op.instruction.I.immediate);
+	INT32 imm = BranchAdrr(op.instruction.I.immediate);
 	
 	if (isOverflow(this->pc, imm)) err |= ERR_NUMBER_OVERFLOW;
 	if (s == t) this->setPC(this->pc + imm);
@@ -758,12 +761,13 @@ void CPU::OpBeq(Operand op)
 void CPU::OpBne(Operand op)
 {
 	// if (R[rs] == R[rt]) PC = PC + BranchAddr
-	/* already +4 after PC() */
+	/* already +4 after fetch */
+	/* Signed Operation on imm */
 	// ERR_Detection : throw overflow message, and execute this instruction
 	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 t = this->getReg(op.instruction.I.rt);
-	UINT32 imm = BranchAdrr(op.instruction.I.immediate);
+	INT32 imm = BranchAdrr(op.instruction.I.immediate);
 
 	if (isOverflow(this->pc, imm)) err |= ERR_NUMBER_OVERFLOW;
 	if (s != t) this->setPC(this->pc + imm);
@@ -781,7 +785,7 @@ void CPU::OpJal(Operand op)
 {
 	// R[31] = PC
 	// PC = JumpAddr
-	/* already +4 after PC() */
+	/* already +4 after fetch */
 	this->setReg(31, this->getPC());
 	this->setPC(JumpAddr(op.instruction.J.address));
 }

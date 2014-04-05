@@ -45,6 +45,7 @@ void Memory::load(FILE* ir, FILE* data, UINT32 ENTRY_POINT)
 
 UINT32 Memory::loadInstruction(UINT32 address)
 {
+	if (address % 4 != 0) throw (UINT32) ERR_DATA_MISALIGNED;
 	// only combine the information (no endian), no need to sort
 	///if (address + 3 >= MEMORY_SIZE) throw ERR_MEMMORY_ADDRESS_OVERFLOW;
 	return iMemory[address] << 24 |
@@ -96,13 +97,3 @@ void Memory::saveByte(UINT32 address, UINT32 byte)
 	///if (address >= MEMORY_SIZE) throw ERR_MEMMORY_ADDRESS_OVERFLOW;
 	dMemory[address] = byte;
 }
-
-#ifdef _DEBUG
-
-void Memory::printMemory()
-{
-	for (int i = 0; i < 12; ++i)
-		printf("%X ", dMemory[i]);
-}
-
-#endif

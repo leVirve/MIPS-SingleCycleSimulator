@@ -55,19 +55,14 @@ int main()
 	while (1) {
 #ifdef _DEBUG
 		printf("PC: %X\nSP: %X\n", ENTRY_POINT, STACK_POINT); //
-		printf("-- Round %d \n", cycle);//
+		printf("-- Round %d \n", cycle + 1);//
 #endif
-		reporter.write(vcpu, cycle);
-		++cycle;
-		UINT32 pc = vcpu->PC();
-		UINT32 instr = vcpu->fetch(memory->loadInstruction(pc));
-		Operand operand = vcpu->decode(instr);
-
-#ifdef _DEBUG
-		//memory->printMemory();
-#endif
-
 		try {
+			reporter.write(vcpu, cycle);
+			UINT32 pc = vcpu->PC();
+			UINT32 instr = vcpu->fetch(memory->loadInstruction(pc));
+			++cycle;
+			Operand operand = vcpu->decode(instr);
 			_halt = vcpu->exec(operand);
 		}
 		catch (UINT32 expCode) {
