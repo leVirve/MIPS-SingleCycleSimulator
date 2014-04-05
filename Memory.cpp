@@ -15,7 +15,7 @@ void Memory::load(FILE* ir, FILE* data, UINT32 ENTRY_POINT)
 
 	try {
 #ifdef _DEBUG
-		if(ir_sz > MEMORY_SIZE) throw "Memory Exceed";
+		///if(ir_sz > MEMORY_SIZE) throw "Memory Exceed";
 #endif
 		for (unsigned int k = 0; k < 4 * ir_sz; ++k) {
 			BYTE tmp;

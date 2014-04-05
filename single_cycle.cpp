@@ -56,7 +56,6 @@ int main()
 #ifdef _DEBUG
 		printf("PC: %X\nSP: %X\n", ENTRY_POINT, STACK_POINT); //
 		printf("-- Round %d \n", cycle);//
-		//if (cycle == 60) break;
 #endif
 		reporter.write(vcpu, cycle);
 		++cycle;

@@ -74,7 +74,7 @@ Operand CPU::decode(UINT32 instruction)
 {
 	Operand _operand;
 	// distinguish instructions from R, I, J type
-	UINT32 _type = instruction >> (32 - 6) & 0x3f;
+	UINT32 _type = (instruction >> 26) & 0x3f;
 #ifdef _DEBUG
 	printf("OpCode: %02X\n", _type);
 #endif
@@ -296,7 +296,7 @@ UINT32 CPU::SignExtImmb(UINT32 t)
 {
 	// {16{immediate[15]}, immediate}
 	if ((t >> 7) == 0x0)
-		return t & 0x00ffffff;
+		return t & 0x000000ff;
 	else
 		return t | 0xffffff00;
 }
