@@ -18,24 +18,22 @@ void Memory::load(FILE* ir, FILE* data, UINT32 ENTRY_POINT)
 		///if(ir_sz > MEMORY_SIZE) throw "Memory Exceed";
 #endif
 		for (unsigned int k = 0; k < 4 * ir_sz; ++k) {
-			BYTE tmp;
-			fread(&tmp, sizeof(BYTE), 1, ir);
-			iMemory[ENTRY_POINT + k] = tmp;
+			fread(&iMemory[ENTRY_POINT + k], sizeof(BYTE), 1, ir);
 		}
 	} catch(char* e) {
 		fprintf(stderr, "%s\n", e); //
 	}
-	
+	fclose(ir);
+int k = 1;////
 	try {
 		///if(d_sz > MEMORY_SIZE) throw "Memory Exceed";
 		for (unsigned int i = 0; i < 4 * d_sz; ++i) {
-			BYTE tmp;
-			fread(&tmp, sizeof(BYTE), 1, data);
-			dMemory[i] = tmp;
+			fread(&dMemory[i], sizeof(BYTE), 1, data);
 		}
 	} catch(char* e) {
 		fprintf(stderr, "%s\n", e); //
 	}
+	fclose(data);
 
 #ifdef _DEBUG
 	printf("IR Size: %d\n", ir_sz);
@@ -45,6 +43,7 @@ void Memory::load(FILE* ir, FILE* data, UINT32 ENTRY_POINT)
 
 UINT32 Memory::loadInstruction(UINT32 address)
 {
+	if (address >= MEMORY_SIZE) throw (UINT32)ERR_MEMMORY_ADDRESS_OVERFLOW;
 	if (address % 4 != 0) throw (UINT32) ERR_DATA_MISALIGNED;
 	// only combine the information (no endian), no need to sort
 	///if (address + 3 >= MEMORY_SIZE) throw ERR_MEMMORY_ADDRESS_OVERFLOW;

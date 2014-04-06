@@ -501,7 +501,7 @@ void CPU::OpSra(Operand op)
 	UINT32 err = 0;
 	INT32  t = this->getReg(op.instruction.R.rt);
 	UINT32 shamt = op.instruction.R.shamt;
-	UINT32 val = (t > 0) ? t >> shamt
+	UINT32 val = (t >= 0) ? t >> shamt
 						: (t >> shamt) | ~( 0xffffffff >> shamt );
 
 	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
@@ -543,7 +543,9 @@ void CPU::OpLw(Operand op)
 	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
-
+	printf("$$$ %X %X %d\n", s, imm, op.instruction.I.rt);
+	for (int i = -16; i < 32; i += 4)
+		printf("%X -> %X\n", s + imm + i, this->memory->getWord(s + imm + i));
 	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
 	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
@@ -635,6 +637,7 @@ void CPU::OpSw(Operand op)
 	// 4 bytes in Memory[R[rs] + C(signed)] = R[rt] 
 	// ERR_Detection : throw overflow message, and continue this instruction
 	// ERR_Detection : throw memory address overflow, and halt simulation
+	// ERR_Detection : throw misalignment message, and halt simulation
 	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
@@ -642,6 +645,7 @@ void CPU::OpSw(Operand op)
 
 	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
 	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
+	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
 	this->memory->saveWord(s + imm, val);
 	if (err != 0) throw err; // send error message
 }
@@ -651,6 +655,7 @@ void CPU::OpSh(Operand op)
 	// 2 bytes in Memory[R[rs] + C(signed)], signed = R[rt]
 	// ERR_Detection : throw overflow message, and execute this instruction
 	// ERR_Detection : throw memory address overflow, and halt simulation
+	// ERR_Detection : throw misalignment message, and halt simulation
 	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
@@ -658,6 +663,7 @@ void CPU::OpSh(Operand op)
 
 	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
 	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
+	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
 	this->memory->saveHalfWord(s + imm, val);
 	if (err != 0) throw err; // send error message
 }
@@ -667,6 +673,7 @@ void CPU::OpSb(Operand op)
 	// 2 bytes in Memory[R[rs] + C(signed)], signed = R[rt]
 	// ERR_Detection : throw overflow message, and execute this instruction
 	// ERR_Detection : throw memory address overflow, and halt simulation
+	// ERR_Detection : throw misalignment message, and halt simulation
 	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
@@ -674,6 +681,7 @@ void CPU::OpSb(Operand op)
 
 	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
 	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
+	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
 	this->memory->saveByte(s + imm, val);
 	if (err != 0) throw err; // send error message
 }
