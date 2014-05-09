@@ -53,15 +53,15 @@ int main()
 	unsigned int cycle = 0;
 	bool _halt = false;
 	while (1) {
-#ifdef _DEBUG
+
 		printf("PC: %X\nSP: %X\n", ENTRY_POINT, STACK_POINT); //
 		printf("-- Round %d \n", cycle + 1);//
-#endif
+// if(cycle  == 26) break;
 		try {
 			reporter.write(vcpu, cycle);
+			++cycle;
 			UINT32 pc = vcpu->PC();
 			UINT32 instr = vcpu->fetch(memory->loadInstruction(pc));
-			++cycle;
 			Operand operand = vcpu->decode(instr);
 			_halt = vcpu->exec(operand);
 		}
@@ -85,9 +85,9 @@ int main()
 				errdumper.write(errInfo);
 				_halt = true;
 			}
-#ifdef _DEBUG
+
 			printf("EXP: %X !!!!!!!!!!!!!!\n", expCode);
-#endif
+
 		}
 		if (_halt == true) break;
 	}

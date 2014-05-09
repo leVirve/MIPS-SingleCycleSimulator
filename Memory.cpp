@@ -28,8 +28,10 @@ int k = 1;////
 	try {
 		///if(d_sz > MEMORY_SIZE) throw "Memory Exceed";
 		for (unsigned int i = 0; i < 4 * d_sz; ++i) {
-			fread(&dMemory[i], sizeof(BYTE), 1, data);
+			int ss= fread(&dMemory[i], sizeof(BYTE), 1, data);
+			if (ss) k++;
 		}
+printf("read succ : 0x%X bytes\n", k);
 	} catch(char* e) {
 		fprintf(stderr, "%s\n", e); //
 	}

@@ -58,9 +58,8 @@ UINT32 CPU::fetch(UINT32 x)
 		(x >> 8) & 0xff00 |
 		(x << 8) & 0xff0000 |
 		(x << 24) & 0xff000000;
-#ifdef _DEBUG
+
 	printf("Little Endian IR: %08x\n", _instruction);
-#endif
 	return _instruction;
 }
 
@@ -75,9 +74,9 @@ Operand CPU::decode(UINT32 instruction)
 	Operand _operand;
 	// distinguish instructions from R, I, J type
 	UINT32 _type = (instruction >> 26) & 0x3f;
-#ifdef _DEBUG
+
 	printf("OpCode: %02X\n", _type);
-#endif
+
 	switch (_type) {
 		case 0x0: // R-type
 			_operand.tpye = R_TYPE;
@@ -342,10 +341,10 @@ UINT32 CPU::JumpAddr(UINT32 t)
  */
 bool isOverflow(UINT32 a, UINT32 b)
 {
-	int sum = a + b;
+	UINT32 sum = a + b;
 	// if signs of a, b are the same 
-	if ( ((a >> 31) ^ (b >> 31)) == 0)
-		if ((a >> 31) ^ (sum >> 31)) return true;
+	if (((a >> 31) ^ (b >> 31)) == 0)
+		if (((a >> 31) ^ (sum >> 31)) == 1) return true;
 	return false;
 }
 
@@ -371,7 +370,9 @@ void CPU::OpAdd(Operand op)
 	UINT32 s = this->getReg(op.instruction.R.rs);
 	UINT32 t = this->getReg(op.instruction.R.rt);
 	UINT32 val = s + t;
-
+#ifdef _DEBUG
+	printf("%X(%d) + %X(%d) = %X(%d)\n", s, s, t, t, val, val);
+#endif
 	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	if (isOverflow(s, t)) err |= ERR_NUMBER_OVERFLOW; // continue
 	this->setReg(op.instruction.R.rd, val);
@@ -386,10 +387,11 @@ void CPU::OpSub(Operand op)
 	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.R.rs);
 	UINT32 t = this->getReg(op.instruction.R.rt);
-	UINT32 val = s + twoComplement(t);
-
+	UINT32 new_t = twoComplement(t);
+	UINT32 val = s + new_t;
+printf("Sub %d %d\n", s, t);
 	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
-	if (isOverflow(s, t) || t == 0x80000000) err |= ERR_NUMBER_OVERFLOW; // continue
+	if (isOverflow(s, new_t) || t == 0x80000000) err |= ERR_NUMBER_OVERFLOW; // continue
 	this->setReg(op.instruction.R.rd, val);
 	if (err != 0) throw err; // send error message
 }
@@ -503,7 +505,7 @@ void CPU::OpSra(Operand op)
 	UINT32 shamt = op.instruction.R.shamt;
 	UINT32 val = (t >= 0) ? t >> shamt
 						: (t >> shamt) | ~( 0xffffffff >> shamt );
-
+printf("SRA %d(%d) >> %d ->%d(%d)\n", t, op.instruction.R.rt, shamt, val, op.instruction.R.rd);
 	if (op.instruction.R.rd == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	this->setReg(op.instruction.R.rd, val);
 	if (err != 0) throw err; // send error message
@@ -526,7 +528,7 @@ void CPU::OpAddi(Operand op)
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
 	UINT32 val = s + imm;
-
+printf("%d %d\n",s, imm );
 	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW; // continue
 	this->setReg(op.instruction.I.rt, val);
@@ -543,14 +545,14 @@ void CPU::OpLw(Operand op)
 	UINT32 err = 0;
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 imm = SignExtImm(op.instruction.I.immediate);
-	printf("$$$ %X %X %d\n", s, imm, op.instruction.I.rt);
-	for (int i = -16; i < 32; i += 4)
-		printf("%X -> %X\n", s + imm + i, this->memory->getWord(s + imm + i));
 	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
-	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
-	if ((s + imm) % 4 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
+printf("LW %d %d\n", s, imm);
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW; // halt
+	if ((s + imm) % 4 != 0) err |= ERR_DATA_MISALIGNED; // halt
+	if((err & ERR_MEMMORY_ADDRESS_OVERFLOW) || (err & ERR_DATA_MISALIGNED)) { printf("WTF %d\n", err); throw err;}
 	this->setReg(op.instruction.I.rt, this->memory->getWord(s + imm));
+printf("__ data= %X(%d)\n", this->getReg(op.instruction.I.rt), op.instruction.I.rt);
 	if (err != 0) throw err; // send error message
 }
 
@@ -568,8 +570,9 @@ void CPU::OpLh(Operand op)
 
 	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
-	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
-	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW; // halt
+	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED; // halt
+	if((err & ERR_MEMMORY_ADDRESS_OVERFLOW) || (err & ERR_DATA_MISALIGNED)) throw err;
 	UINT32 val = SignExtImm(this->memory->getHalfWord(s + imm));
 	this->setReg(op.instruction.I.rt, val);
 	if (err != 0) throw err; // send error message
@@ -588,8 +591,9 @@ void CPU::OpLhu(Operand op)
 
 	if (op.instruction.R.rt == 0) err |= ERR_WRITE_REG_ZERO; // continue
 	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
-	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
-	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW; // halt
+	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED; // halt
+	if((err & ERR_MEMMORY_ADDRESS_OVERFLOW) || (err & ERR_DATA_MISALIGNED)) throw err;
 	UINT32 val = this->memory->getHalfWord(s + imm);
 	this->setReg(op.instruction.I.rt, val & 0xffff);
 	if (err != 0) throw err; // send error message
@@ -644,8 +648,9 @@ void CPU::OpSw(Operand op)
 	UINT32 val = this->getReg(op.instruction.I.rt);
 
 	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
-	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
-	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW; // halt
+	if ((s + imm) % 4 != 0) err |= ERR_DATA_MISALIGNED; // halt
+	if((err & ERR_MEMMORY_ADDRESS_OVERFLOW) || (err & ERR_DATA_MISALIGNED)) throw err;
 	this->memory->saveWord(s + imm, val);
 	if (err != 0) throw err; // send error message
 }
@@ -662,8 +667,9 @@ void CPU::OpSh(Operand op)
 	UINT32 val = this->getReg(op.instruction.I.rt) & 0xffff;
 
 	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
-	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
-	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
+	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW; // halt
+	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED; // halt
+	if((err & ERR_MEMMORY_ADDRESS_OVERFLOW) || (err & ERR_DATA_MISALIGNED)) throw err;
 	this->memory->saveHalfWord(s + imm, val);
 	if (err != 0) throw err; // send error message
 }
@@ -681,7 +687,6 @@ void CPU::OpSb(Operand op)
 
 	if (isOverflow(s, imm)) err |= ERR_NUMBER_OVERFLOW;  // continue
 	if ((s + imm) >= MEMORY_SIZE) err |= ERR_MEMMORY_ADDRESS_OVERFLOW, throw err; // halt
-	if ((s + imm) % 2 != 0) err |= ERR_DATA_MISALIGNED, throw err; // halt
 	this->memory->saveByte(s + imm, val);
 	if (err != 0) throw err; // send error message
 }
@@ -761,7 +766,9 @@ void CPU::OpBeq(Operand op)
 	UINT32 s = this->getReg(op.instruction.I.rs);
 	UINT32 t = this->getReg(op.instruction.I.rt);
 	INT32 imm = BranchAdrr(op.instruction.I.immediate);
-	
+#ifdef _DEBUG
+	printf("%X(%d) %X(%d) = %X(%d)\n", this->pc, this->pc, imm, imm, this->pc + imm, this->pc + imm);
+#endif
 	if (isOverflow(this->pc, imm)) err |= ERR_NUMBER_OVERFLOW;
 	if (s == t) this->setPC(this->pc + imm);
 	if (err != 0) throw err; // send error message
