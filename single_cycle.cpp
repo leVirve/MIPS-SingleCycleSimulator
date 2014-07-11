@@ -28,14 +28,15 @@ void loader()
 {
 	UINT32 &pc = ENTRY_POINT;
 	UINT32 &sp = STACK_POINT;
-	FILE* ir = fopen(IR_BIN, "r");
-	FILE* data = fopen(DATA_BIN, "r");
+	FILE* ir = fopen("iimage.bin", "rb");
+	FILE* data = fopen("dimage.bin", "rb");
 	try {
-		///if (ir == NULL || data == NULL) throw "No File";
+		if (ir == 0 || data == 0) throw "No File";
 		fread(&pc, sizeof(UINT32), 1, ir);
 		fread(&sp, sizeof(UINT32), 1, data);
-	} catch (char* e) {
+	} catch (const char* e) {
 		fprintf(stderr, "%s\n", e); //
+		throw "Loader Err";
 	}
 
 	memory->load(ir, data, ENTRY_POINT);
@@ -49,7 +50,12 @@ int main()
 	vcpu = new CPU();
 	memory = new Memory();
 
-	loader();
+	try {
+		loader();
+	} catch(const char* e) {
+		puts(e);
+		return 1;	
+	}	
 	unsigned int cycle = 0;
 	bool _halt = false;
 	while (1) {
