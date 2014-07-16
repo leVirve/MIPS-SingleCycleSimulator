@@ -17,8 +17,15 @@
 
 #define UINT32 unsigned int
 #define INT32 int
+#define ITER unsigned int
 #define BYTE unsigned char
 #define MEMORY_SIZE 1024
+
+#define STAGES 5
+
+/* Status Code */
+#define SUCCESS 0
+#define UNEXPECTED -1
 
 #define ERR_WRITE_REG_ZERO 0x1
 #define ERR_NUMBER_OVERFLOW 0x10
